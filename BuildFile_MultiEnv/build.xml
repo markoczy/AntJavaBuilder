@@ -1,0 +1,670 @@
+<project name="ANT Java Builder" basedir="." default="build">
+
+        <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
+    <!--+++++++      ANT JAVA MULTI BUILDER BY ALEISTAR MARKOCZY     ++++++++-->
+    <!--+++++++                  (VERSION: 1.0.0)                    ++++++++-->
+        <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
+    
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    License Note
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!--
+    ////////////////////////////////////////////////////////////////////////////
+    This build file is under public domain, and I do not claim any copyright or 
+    other kind of license. Get the newest version free at:
+
+    GitHub.com/markoczy/AntJavaBuilder
+    ////////////////////////////////////////////////////////////////////////////
+    -->
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Import Section
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- ANT Contrib -->
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties"/>
+
+    <!-- Properties -->
+    <loadproperties srcfile="build.properties"/>
+
+    <!-- Build number (hacky ik) -->
+    <trycatch property="prop" reference="ref">
+        <try>
+            <loadproperties srcfile="build.number"/>
+        </try>
+        <catch>
+            <buildnumber file="build.number"/>
+            <loadproperties srcfile="build.number"/>
+        </catch>
+    </trycatch>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Runnable Section
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <property name="version.build_uid" value="${build.number}"/>
+
+    <!-- Build All -->
+    <target name="build">
+        <antcall target="clean" />
+        <antcall target="init" />
+        <antcall target="src.copy" />
+        <antcall target="libs.copy" />
+        <antcall target="scripts.copy" />
+        <antcall target="res.copy" />
+        <antcall target="src.replace_tokens" />
+        <antcall target="res.replace_tokens" />
+        <antcall target="script.replace_tokens" />
+        <antcall target="compile" />
+        <antcall target="jar" />
+        <antcall target="clean_build" />
+        <antcall target="zip" />
+        <!-- Increase build file when finished -->
+        <buildnumber file="build.number"/>
+        <echo>Build ${build.number} created.</echo>
+    </target>
+
+    <!-- Run Development Build -->
+	<target name="dev">
+        <java jar="${build.dev}/${project.name}.jar" fork="true"/>
+    </target>
+
+    <!-- Run Development Build -->
+	<target name="test">
+        <java jar="${build.test}/${project.name}.jar" fork="true"/>
+    </target>
+    
+    <!-- Run Development Build -->
+	<target name="int">
+        <java jar="${build.int}/${project.name}.jar" fork="true"/>
+    </target>
+    
+    <!-- Run Development Build -->
+	<target name="prod">
+        <java jar="${build.prod}/${project.name}.jar" fork="true"/>
+    </target>
+
+    <target name="run">
+        <antcall target="dev" />
+    </target>
+
+    <!-- Compile and Run -->
+    <target name="cr">
+        <antcall target="build" />
+        <antcall target="run" />
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Declare Section
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <description>
+    Basic Java Project Builder with automated jar generation, zip packaging,
+    and a basic run task. Supports incremental build ID and Timestamp.
+    </description>
+
+    <tstamp>
+        <format property="version.tstamp" pattern="${version.tstamp.pattern}"/>
+    </tstamp>
+
+    <!-- build main dir -->
+    <property name="build" value="${build.dir}/build" />
+    <!-- install dir -->
+    <property name="install" value="${build.dir}/install" />
+    <!-- source files -->
+    <property name="src" value="${build}/src" />
+    <!-- env dirs -->
+    <property name="build.dev" value="${build}/dev" />
+    <property name="build.test" value="${build}/test" />
+    <property name="build.int" value="${build}/int" />
+    <property name="build.prod" value="${build}/prod" />
+    <!-- class files -->
+    <property name="bin.dev" value="${build.dev}/bin" />
+    <property name="bin.test" value="${build.test}/bin" />
+    <property name="bin.int" value="${build.int}/bin" />
+    <property name="bin.prod" value="${build.prod}/bin" />
+    <!-- libs -->
+    <property name="lib.dev" value="${build.dev}/${build.dir.lib}" />
+    <property name="lib.test" value="${build.test}/${build.dir.lib}" />
+    <property name="lib.int" value="${build.int}/${build.dir.lib}" />
+    <property name="lib.prod" value="${build.prod}/${build.dir.lib}" />
+    <!-- scripts -->
+    <property name="script.dev" value="${build.dev}/${build.dir.script}" />
+    <property name="script.test" value="${build.test}/${build.dir.script}" />
+    <property name="script.int" value="${build.int}/${build.dir.script}" />
+    <property name="script.prod" value="${build.prod}/${build.dir.script}" />
+    <!-- resources -->
+    <property name="res.dev" value="${build.dev}/${build.dir.res}" />
+    <property name="res.test" value="${build.test}/${build.dir.res}" />
+    <property name="res.int" value="${build.int}/${build.dir.res}" />
+    <property name="res.prod" value="${build.prod}/${build.dir.res}" />
+
+    <path id="classpath.dev">
+        <fileset dir="${path.dir.lib.dev}" includes="*.jar" />
+    </path>
+
+    <path id="classpath.test">
+        <fileset dir="${path.dir.lib.test}" includes="*.jar" />
+    </path>
+
+    <path id="classpath.int">
+        <fileset dir="${path.dir.lib.int}" includes="*.jar" />
+    </path>
+
+    <path id="classpath.prod">
+        <fileset dir="${path.dir.lib.prod}" includes="*.jar" />
+    </path>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Clean
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <target name="clean">
+        <delete dir="${build}" />
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Init
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <target name="init">
+        <mkdir dir="${build.dir}" />
+        <mkdir dir="${build.dev}" />
+        <mkdir dir="${build.test}" />
+        <mkdir dir="${build.int}" />
+        <mkdir dir="${build.prod}" />
+        <mkdir dir="${bin.dev}" />
+        <mkdir dir="${bin.test}" />
+        <mkdir dir="${bin.int}" />
+        <mkdir dir="${bin.prod}" />
+        <mkdir dir="${src}" />
+        <mkdir dir="${install}" />
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Copy files
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- function template -->
+    <target name="copy">
+    <if>
+        <available file="${a_src}" type="dir"/>
+        <then>
+            <mkdir dir="${a_dest}" />
+            <copy todir="${a_dest}">
+                <fileset dir="${a_src}">
+                    <include name="**/*"/>
+                </fileset>
+            </copy> 
+        </then>
+        <else>
+<echo>Skipped copy ${a_name}: no such folder "${a_src}"</echo>
+        </else>
+    </if>
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- copy source files -->
+    <target name="src.copy"> 
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.src}"/>
+            <param name="a_dest" value="${src}"/>
+            <param name="a_name" value="source files"/>
+        </antcall>
+    </target>
+
+    <!-- +++++++++++++++++++++++ copy libs +++++++++++++++++++++++++++++++++ -->
+
+    <!-- dev -->
+    <target name="libs.copy.dev">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.lib.dev}"/>
+            <param name="a_dest" value="${lib.dev}"/>
+            <param name="a_name" value="libraries dev"/>
+        </antcall>
+    </target>
+
+    <!-- test -->
+    <target name="libs.copy.test">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.lib.test}"/>
+            <param name="a_dest" value="${lib.test}"/>
+            <param name="a_name" value="libraries test"/>
+        </antcall>
+    </target>
+
+    <!-- int -->
+    <target name="libs.copy.int">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.lib.int}"/>
+            <param name="a_dest" value="${lib.int}"/>
+            <param name="a_name" value="libraries int"/>
+        </antcall>
+    </target>
+
+    <!-- prod -->
+    <target name="libs.copy.prod">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.lib.prod}"/>
+            <param name="a_dest" value="${lib.prod}"/>
+            <param name="a_name" value="libraries prod"/>
+        </antcall>
+    </target>
+
+    <!-- copy libs -->
+    <target name="libs.copy">
+        <antcall target="libs.copy.dev" />
+        <antcall target="libs.copy.test" />
+        <antcall target="libs.copy.int" />
+        <antcall target="libs.copy.prod" />
+    </target>
+
+    <!-- +++++++++++++++++++++++ copy scripts ++++++++++++++++++++++++++++++ -->
+
+    <!-- dev -->
+    <target name="scripts.copy.dev">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.script.dev}"/>
+            <param name="a_dest" value="${script.dev}"/>
+            <param name="a_name" value="scripts dev"/>
+        </antcall>
+    </target>
+
+    <!-- test -->
+    <target name="scripts.copy.test">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.script.test}"/>
+            <param name="a_dest" value="${script.test}"/>
+            <param name="a_name" value="scripts test"/>
+        </antcall>
+    </target>
+
+    <!-- int -->
+    <target name="scripts.copy.int">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.script.int}"/>
+            <param name="a_dest" value="${script.int}"/>
+            <param name="a_name" value="scripts int"/>
+        </antcall>
+    </target>
+
+    <!-- prod -->
+    <target name="scripts.copy.prod">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.script.prod}"/>
+            <param name="a_dest" value="${script.prod}"/>
+            <param name="a_name" value="scripts prod"/>
+        </antcall>
+    </target>
+
+    <!-- copy libs -->
+    <target name="scripts.copy">
+        <antcall target="scripts.copy.dev" />
+        <antcall target="scripts.copy.test" />
+        <antcall target="scripts.copy.int" />
+        <antcall target="scripts.copy.prod" />
+    </target>
+
+
+    <!-- ++++++++++++++++++++++ copy resources +++++++++++++++++++++++++++++ -->
+
+    <!-- dev -->
+    <target name="res.copy.dev">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.res.dev}"/>
+            <param name="a_dest" value="${res.dev}"/>
+            <param name="a_name" value="resources dev"/>
+        </antcall>
+    </target>
+
+    <!-- test -->
+    <target name="res.copy.test">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.res.test}"/>
+            <param name="a_dest" value="${res.test}"/>
+            <param name="a_name" value="resources test"/>
+        </antcall>
+    </target>
+
+    <!-- int -->
+    <target name="res.copy.int">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.res.int}"/>
+            <param name="a_dest" value="${res.int}"/>
+            <param name="a_name" value="resources int"/>
+        </antcall>
+    </target>
+
+    <!-- prod -->
+    <target name="res.copy.prod">
+        <antcall target="copy">       
+            <param name="a_src" value="${path.dir.res.prod}"/>
+            <param name="a_dest" value="${res.prod}"/>
+            <param name="a_name" value="resources prod"/>
+        </antcall>
+    </target>
+
+    <!-- copy resources -->
+    <target name="res.copy">
+        <antcall target="res.copy.dev" />
+        <antcall target="res.copy.test" />
+        <antcall target="res.copy.int" />
+        <antcall target="res.copy.prod" />
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Replace Tokens
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- function template: folder -->
+    <target name="replace_tokens">
+        <foreach target="replace_tokens_file" param="a_file">
+            <path>
+                <fileset dir="${a_dir}" casesensitive="yes">
+                    <include name="**/*.*"/>
+                </fileset>  
+            </path>
+        </foreach>
+    </target>
+
+    <!-- function template: file -->
+    <target name="replace_tokens_file">
+        <replace file="${a_file}">
+        <replacefilter 
+            token="${version.major.token}" 
+            value="${version.major}"/>
+        <replacefilter 
+            token="${version.minor.token}" 
+            value="${version.minor}"/>
+        <replacefilter 
+            token="${version.build.token}" 
+            value="${version.build}"/>
+        <replacefilter 
+            token="${version.build_uid.token}" 
+            value="${version.build_uid}"/> 
+        <replacefilter 
+            token="${version.tstamp.token}"
+            value="${version.tstamp}"/>
+        <replacefilter 
+            token="${version.full.token}"
+            value="${version.full}"/>
+        <replacefilter 
+            token="${project.name.token}"
+            value="${project.name}"/>
+        <replacefilter 
+            token="${project.vendor.token}"
+            value="${project.vendor}"/>
+        </replace>
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- function call: source files -->
+    <target name="src.replace_tokens">
+        <if>
+            <equals arg1="${build.replace_tokens.src}" arg2="true" />
+            <then>
+                <antcall target="replace_tokens">       
+                    <param name="a_dir" value="${src}"/>
+                </antcall>
+            </then>
+            <else>
+<echo>Skipped token replace for source files.</echo>   
+            </else>
+        </if>
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <target name="res.replace_tokens.dev">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${res.dev}"/>
+        </antcall>
+    </target>
+
+    <target name="res.replace_tokens.test">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${res.test}"/>
+        </antcall>
+    </target>
+
+    <target name="res.replace_tokens.int">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${res.int}"/>
+        </antcall>
+    </target>
+
+    <target name="res.replace_tokens.prod">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${res.prod}"/>
+        </antcall>
+    </target>
+
+    <!-- function call: resource files -->
+    <target name="res.replace_tokens">
+        <if>
+            <equals arg1="${build.replace_tokens.res}" arg2="true" />
+            <then>
+                <antcall target="res.replace_tokens.dev" />
+                <antcall target="res.replace_tokens.test" />
+                <antcall target="res.replace_tokens.int" />
+                <antcall target="res.replace_tokens.prod" />
+            </then>
+            <else>
+<echo>Skipped token replace for resource files.</echo>   
+            </else>
+        </if>
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <target name="script.replace_tokens.dev">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${script.dev}"/>
+        </antcall>
+    </target>
+
+    <target name="script.replace_tokens.test">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${script.test}"/>
+        </antcall>
+    </target>
+
+    <target name="script.replace_tokens.int">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${script.int}"/>
+        </antcall>
+    </target>
+
+    <target name="script.replace_tokens.prod">
+        <antcall target="replace_tokens">       
+            <param name="a_dir" value="${script.prod}"/>
+        </antcall>
+    </target>
+
+    <!-- function call: script files -->
+    <target name="script.replace_tokens">
+        <if>
+            <equals arg1="${build.replace_tokens.script}" arg2="true" />
+            <then>
+                <antcall target="script.replace_tokens.dev" />
+                <antcall target="script.replace_tokens.test" />
+                <antcall target="script.replace_tokens.int" />
+                <antcall target="script.replace_tokens.prod" />
+            </then>
+            <else>
+<echo>Skipped token replace for script files.</echo>   
+            </else>
+        </if>
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Compile Sources
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    
+    <!-- Compile .java to .class files -->
+    <target name="compile_files">
+        <javac  destdir="${a_dest}" 
+                classpathref="${a_classpath}" 
+                debug="${a_is_debug}" 
+                includeantruntime="false" >
+            <src path="${src}"/>
+        </javac>
+    </target>
+
+    <target name="compile.dev">
+        <antcall target="compile_files">       
+            <param name="a_dest" value="${bin.dev}"/>
+            <param name="a_classpath" value="classpath.dev"/>
+            <param name="a_is_debug" value="${build.is_debug.dev}"/>
+        </antcall>
+    </target>
+
+    <target name="compile.test">
+        <antcall target="compile_files">       
+            <param name="a_dest" value="${bin.test}"/>
+            <param name="a_classpath" value="classpath.test"/>
+            <param name="a_is_debug" value="${build.is_debug.test}"/>
+        </antcall>
+    </target>
+
+    <target name="compile.int">
+        <antcall target="compile_files">       
+            <param name="a_dest" value="${bin.int}"/>
+            <param name="a_classpath" value="classpath.int"/>
+            <param name="a_is_debug" value="${build.is_debug.int}"/>
+        </antcall>
+    </target>
+
+        <target name="compile.prod">
+        <antcall target="compile_files">       
+            <param name="a_dest" value="${bin.prod}"/>
+            <param name="a_classpath" value="classpath.prod"/>
+            <param name="a_is_debug" value="${build.is_debug.prod}"/>
+        </antcall>
+    </target>
+
+    <target name="compile">
+        <antcall target="compile.dev" />
+        <antcall target="compile.test" />
+        <antcall target="compile.int" />
+        <antcall target="compile.prod" />
+    </target>
+
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Create runnable jar
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- function template: Create executable archive -->
+    <target name="jar_files">
+        <var name="libsep" value="/"/>
+        <if>
+            <equals arg1="${build.dir.lib}" arg2="" />
+            <then>
+                <var name="libsep" value=""/>
+            </then>
+        </if>
+        <!-- prefix source files -->
+        <pathconvert property="path.lib" pathsep=" ">
+            <mapper>
+                <chainedmapper>
+                    <!-- remove absolute path -->
+                    <flattenmapper />
+                    <!-- add prefix -->
+                    <globmapper from="*" to="${build.dir.lib}${libsep}*" />
+                </chainedmapper>
+            </mapper>
+            <path>
+                <fileset dir="${a_libdir}">
+                    <include name="**/*.jar" />
+                </fileset>
+            </path>
+        </pathconvert>
+        <jar destfile="${a_outdir}/${project.name}.jar" basedir="${a_basedir}" >
+            <manifest>
+                <attribute name="Build-By" value="${user.name}" />
+                <attribute name="Main-Class" value="${main.class}" />
+                <attribute name="Class-Path" value="${path.lib}" />
+                <section name="common">
+                    <attribute name="Specification-Title" 
+                    value="${project.name}" />
+                    <attribute name="Specification-Version" 
+                    value="${version.pattern}" />
+                    <attribute name="Specification-Vendor" 
+                    value="${project.vendor}" />
+                    <attribute name="Implementation-Title" 
+                    value="${project.name}" />
+                    <attribute name="Implementation-Version" 
+                    value="${version.pattern} / ${build.number}" />
+                    <attribute name="Implementation-Vendor" 
+                    value="${project.vendor}" />
+                </section>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="jar.dev">
+        <antcall target="jar_files">       
+            <param name="a_basedir" value="${bin.dev}"/>
+            <param name="a_libdir" value="${path.dir.lib.dev}"/>
+            <param name="a_outdir" value="${build.dev}"/>
+        </antcall>
+    </target>
+
+    <target name="jar.test">
+        <antcall target="jar_files">       
+            <param name="a_basedir" value="${bin.test}"/>
+            <param name="a_libdir" value="${path.dir.lib.test}"/>
+            <param name="a_outdir" value="${build.test}"/>
+        </antcall>
+    </target>
+
+    <target name="jar.int">
+        <antcall target="jar_files">       
+            <param name="a_basedir" value="${bin.int}"/>
+            <param name="a_libdir" value="${path.dir.lib.int}"/>
+            <param name="a_outdir" value="${build.int}"/>
+        </antcall>
+    </target>
+
+    <target name="jar.prod">
+        <antcall target="jar_files">       
+            <param name="a_basedir" value="${bin.prod}"/>
+            <param name="a_libdir" value="${path.dir.lib.prod}"/>
+            <param name="a_outdir" value="${build.prod}"/>
+        </antcall>
+    </target>
+
+    <!-- create runnable jars -->
+    <target name="jar">
+        <antcall target="jar.dev" />
+        <antcall target="jar.test" />
+        <antcall target="jar.int" />
+        <antcall target="jar.prod" />
+    </target>
+
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Cleanup build
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <target name="clean_build">
+        <delete dir="${src}" />
+        <delete dir="${bin.dev}" />
+        <delete dir="${bin.test}" />
+        <delete dir="${bin.int}" />
+        <delete dir="${bin.prod}" />
+    </target>
+
+    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+    Task: Zip Contents
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <target name="zip" >
+		<zip destfile="${install}/${install.pattern}.zip" basedir="${build}" />
+	</target>
+
+</project>

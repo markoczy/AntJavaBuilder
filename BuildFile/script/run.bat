@@ -1,0 +1,2 @@
+ECHO Version: %BUILD_FULLVER%
+java -jar %PROJECT_NAME%_%BUILD_FULLVER%.jar
