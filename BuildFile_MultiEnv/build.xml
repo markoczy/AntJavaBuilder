@@ -140,21 +140,34 @@
     <property name="res.int" value="${build.int}/${build.dir.res}" />
     <property name="res.prod" value="${build.prod}/${build.dir.res}" />
 
-    <path id="classpath.dev">
-        <fileset dir="${path.dir.lib.dev}" includes="*.jar" />
-    </path>
+    <path id="classpath.dev"/>
+    <path id="classpath.test"/>
+    <path id="classpath.int"/>
+    <path id="classpath.prod"/>
 
-    <path id="classpath.test">
-        <fileset dir="${path.dir.lib.test}" includes="*.jar" />
-    </path>
 
-    <path id="classpath.int">
-        <fileset dir="${path.dir.lib.int}" includes="*.jar" />
-    </path>
+    <if>
+        <equals arg1="${project.haslib}" arg2="true" />
+        <then>
+            <path id="classpath.dev">
+                <fileset dir="${path.dir.lib.dev}" includes="*.jar" />
+            </path>
 
-    <path id="classpath.prod">
-        <fileset dir="${path.dir.lib.prod}" includes="*.jar" />
-    </path>
+            <path id="classpath.test">
+                <fileset dir="${path.dir.lib.test}" includes="*.jar" />
+            </path>
+
+            <path id="classpath.int">
+                <fileset dir="${path.dir.lib.int}" includes="*.jar" />
+            </path>
+
+            <path id="classpath.prod">
+                <fileset dir="${path.dir.lib.prod}" includes="*.jar" />
+            </path>
+        </then>
+    </if>
+
+
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
     Task: Clean
@@ -186,20 +199,30 @@
     Task: Copy files
     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
+
     <!-- function template -->
     <target name="copy">
     <if>
-        <available file="${a_src}" type="dir"/>
+    <equals arg1="${a_cond}" arg2="true" />
         <then>
-            <mkdir dir="${a_dest}" />
-            <copy todir="${a_dest}">
-                <fileset dir="${a_src}">
-                    <include name="**/*"/>
-                </fileset>
-            </copy> 
+            <if>
+                <available file="${a_src}" type="dir"/>
+                <then>
+                    <mkdir dir="${a_dest}" />
+                    <copy todir="${a_dest}">
+                        <fileset dir="${a_src}">
+                            <include name="**/*.*"/>
+                        </fileset>
+                    </copy> 
+                </then>
+                <else>
+<fail>Not found ${a_name} at path ${a_src}.
+Change path or disable ${a_name} for project.</fail>
+                </else>
+            </if>
         </then>
         <else>
-<echo>Skipped copy ${a_name}: no such folder "${a_src}"</echo>
+<echo>Skipped copy ${a_name}: see configuration."</echo>
         </else>
     </if>
     </target>
@@ -212,6 +235,7 @@
             <param name="a_src" value="${path.dir.src}"/>
             <param name="a_dest" value="${src}"/>
             <param name="a_name" value="source files"/>
+            <param name="a_cond" value="true"/>
         </antcall>
     </target>
 
@@ -223,6 +247,7 @@
             <param name="a_src" value="${path.dir.lib.dev}"/>
             <param name="a_dest" value="${lib.dev}"/>
             <param name="a_name" value="libraries dev"/>
+            <param name="a_cond" value="${project.haslib}"/>
         </antcall>
     </target>
 
@@ -232,6 +257,7 @@
             <param name="a_src" value="${path.dir.lib.test}"/>
             <param name="a_dest" value="${lib.test}"/>
             <param name="a_name" value="libraries test"/>
+            <param name="a_cond" value="${project.haslib}"/>
         </antcall>
     </target>
 
@@ -241,6 +267,7 @@
             <param name="a_src" value="${path.dir.lib.int}"/>
             <param name="a_dest" value="${lib.int}"/>
             <param name="a_name" value="libraries int"/>
+            <param name="a_cond" value="${project.haslib}"/>
         </antcall>
     </target>
 
@@ -250,6 +277,7 @@
             <param name="a_src" value="${path.dir.lib.prod}"/>
             <param name="a_dest" value="${lib.prod}"/>
             <param name="a_name" value="libraries prod"/>
+            <param name="a_cond" value="${project.haslib}"/>
         </antcall>
     </target>
 
@@ -269,6 +297,7 @@
             <param name="a_src" value="${path.dir.script.dev}"/>
             <param name="a_dest" value="${script.dev}"/>
             <param name="a_name" value="scripts dev"/>
+            <param name="a_cond" value="${project.hasscript}"/>
         </antcall>
     </target>
 
@@ -278,6 +307,7 @@
             <param name="a_src" value="${path.dir.script.test}"/>
             <param name="a_dest" value="${script.test}"/>
             <param name="a_name" value="scripts test"/>
+            <param name="a_cond" value="${project.hasscript}"/>
         </antcall>
     </target>
 
@@ -287,6 +317,7 @@
             <param name="a_src" value="${path.dir.script.int}"/>
             <param name="a_dest" value="${script.int}"/>
             <param name="a_name" value="scripts int"/>
+            <param name="a_cond" value="${project.hasscript}"/>
         </antcall>
     </target>
 
@@ -296,6 +327,7 @@
             <param name="a_src" value="${path.dir.script.prod}"/>
             <param name="a_dest" value="${script.prod}"/>
             <param name="a_name" value="scripts prod"/>
+            <param name="a_cond" value="${project.hasscript}"/>
         </antcall>
     </target>
 
@@ -316,6 +348,7 @@
             <param name="a_src" value="${path.dir.res.dev}"/>
             <param name="a_dest" value="${res.dev}"/>
             <param name="a_name" value="resources dev"/>
+            <param name="a_cond" value="${project.hasres}"/>
         </antcall>
     </target>
 
@@ -325,6 +358,7 @@
             <param name="a_src" value="${path.dir.res.test}"/>
             <param name="a_dest" value="${res.test}"/>
             <param name="a_name" value="resources test"/>
+            <param name="a_cond" value="${project.hasres}"/>
         </antcall>
     </target>
 
@@ -334,6 +368,7 @@
             <param name="a_src" value="${path.dir.res.int}"/>
             <param name="a_dest" value="${res.int}"/>
             <param name="a_name" value="resources int"/>
+            <param name="a_cond" value="${project.hasres}"/>
         </antcall>
     </target>
 
@@ -343,6 +378,7 @@
             <param name="a_src" value="${path.dir.res.prod}"/>
             <param name="a_dest" value="${res.prod}"/>
             <param name="a_name" value="resources prod"/>
+            <param name="a_cond" value="${project.hasres}"/>
         </antcall>
     </target>
 
@@ -445,7 +481,10 @@
     <!-- function call: resource files -->
     <target name="res.replace_tokens">
         <if>
-            <equals arg1="${build.replace_tokens.res}" arg2="true" />
+            <and>
+                <equals arg1="${project.hasres}" arg2="true" />
+                <equals arg1="${build.replace_tokens.res}" arg2="true" />
+            </and>
             <then>
                 <antcall target="res.replace_tokens.dev" />
                 <antcall target="res.replace_tokens.test" />
@@ -487,7 +526,10 @@
     <!-- function call: script files -->
     <target name="script.replace_tokens">
         <if>
-            <equals arg1="${build.replace_tokens.script}" arg2="true" />
+            <and>
+                <equals arg1="${project.hasscript}" arg2="true" />
+                <equals arg1="${build.replace_tokens.script}" arg2="true" />
+            </and>
             <then>
                 <antcall target="script.replace_tokens.dev" />
                 <antcall target="script.replace_tokens.test" />

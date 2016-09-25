@@ -2,7 +2,7 @@
 
         <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
     <!--+++++++       ANT JAVA BUILDER BY ALEISTAR MARKOCZY          ++++++++-->
-    <!--+++++++                 (VERSION: 1.0.0)                     ++++++++-->
+    <!--+++++++                 (VERSION: 1.0.1)                     ++++++++-->
         <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
     
 
@@ -97,9 +97,15 @@
     <property name="script" value="${build}/${build.dir.script}" />
     <property name="res" value="${build}/${build.dir.res}" />
 
-    <path id="classpath">
-        <fileset dir="${path.dir.lib}" includes="*.jar" />
-    </path>
+    <path id="classpath"/>
+    <if>
+        <equals arg1="${project.haslib}" arg2="true" />
+        <then>
+            <path id="classpath">
+                <fileset dir="${path.dir.lib}" includes="*.jar" />
+            </path>
+        </then>
+    </if>
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
     Task: Clean
@@ -128,17 +134,26 @@
     <!-- function template -->
     <target name="copy">
     <if>
-        <available file="${a_src}" type="dir"/>
+    <equals arg1="${a_cond}" arg2="true" />
         <then>
-            <mkdir dir="${a_dest}" />
-            <copy todir="${a_dest}">
-                <fileset dir="${a_src}">
-                    <include name="**/*.*"/>
-                </fileset>
-            </copy> 
+            <if>
+                <available file="${a_src}" type="dir"/>
+                <then>
+                    <mkdir dir="${a_dest}" />
+                    <copy todir="${a_dest}">
+                        <fileset dir="${a_src}">
+                            <include name="**/*.*"/>
+                        </fileset>
+                    </copy> 
+                </then>
+                <else>
+<fail>Not found ${a_name} at path ${a_src}.
+Change path or disable ${a_name} for project.</fail>
+                </else>
+            </if>
         </then>
         <else>
-<echo>Skipped copy ${a_name}: no such folder "${a_src}"</echo>
+<echo>Skipped copy ${a_name}: see configuration."</echo>
         </else>
     </if>
     </target>
@@ -149,6 +164,7 @@
             <param name="a_src" value="${path.dir.src}"/>
             <param name="a_dest" value="${src}"/>
             <param name="a_name" value="source files"/>
+            <param name="a_cond" value="true"/>
         </antcall>
     </target>
 
@@ -158,6 +174,7 @@
             <param name="a_src" value="${path.dir.lib}"/>
             <param name="a_dest" value="${lib}"/>
             <param name="a_name" value="libraries"/>
+            <param name="a_cond" value="${project.haslib}"/>
         </antcall>
     </target>
 
@@ -167,6 +184,7 @@
         <param name="a_src" value="${path.dir.script}"/>
         <param name="a_dest" value="${script}"/>
         <param name="a_name" value="script files"/>
+        <param name="a_cond" value="${project.hasscript}"/>
     </antcall>
     </target>
 
@@ -176,6 +194,7 @@
         <param name="a_src" value="${path.dir.res}"/>
         <param name="a_dest" value="${res}"/>
         <param name="a_name" value="resources"/>
+        <param name="a_cond" value="${project.hasres}"/>
     </antcall>
     </target>
 
@@ -242,7 +261,10 @@
     <!-- function call: resource files -->
     <target name="res.replace_tokens">
         <if>
-            <equals arg1="${build.replace_tokens.res}" arg2="true" />
+            <and>
+                <equals arg1="$project.hasres}" arg2="true" />
+                <equals arg1="${build.replace_tokens.res}" arg2="true" />
+            </and>
             <then>
                 <antcall target="replace_tokens">       
                     <param name="a_dir" value="${res}"/>
@@ -257,7 +279,10 @@
     <!-- function call: script files -->
     <target name="script.replace_tokens">
         <if>
-            <equals arg1="${build.replace_tokens.script}" arg2="true" />
+            <and>
+                <equals arg1="$project.hasscript}" arg2="true" />
+                <equals arg1="${build.replace_tokens.script}" arg2="true" />
+            </and>
             <then>
                 <antcall target="replace_tokens">       
                     <param name="a_dir" value="${script}"/>
