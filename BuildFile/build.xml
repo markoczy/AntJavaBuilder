@@ -1,23 +1,32 @@
-<project name="ANT Java Builder" basedir="." default="build">
+<project name="ANT Java Builder" basedir="." default="deploy">
 
-        <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
-    <!--+++++++       ANT JAVA BUILDER BY ALEISTAR MARKOCZY          ++++++++-->
-    <!--+++++++                 (VERSION: 1.0.1)                     ++++++++-->
-        <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
-    
+    <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
+    <!--+++++++           AJB SINGLE ENVIRONMENT DEPLOYER            ++++++++-->
+    <!--+++++++                (AJB VERSION: 1.1.0)                  ++++++++-->
+    <!--+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
+
+    <!-- - -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - - - - -
+    Dependencies:
+
+    > ANT V1.8.1 or later
+    > ANT Contrib V0.6 or later
+    > ajb.xml V1.1.0
+    - - - -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - - - - - -->
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    License Note
+    Description
     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-    <!--
-    ////////////////////////////////////////////////////////////////////////////
-    This build file is under public domain, and I do not claim any copyright or 
-    other kind of license. Get the newest version free at:
+    <!-- - -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - - - - -
+    Deploys a java project according to the settings in the properties file.
+    Designed for single environment deploy, only one executable will be created.
 
-    GitHub.com/markoczy/AntJavaBuilder
-    ////////////////////////////////////////////////////////////////////////////
-    -->
+    Tasks:
+    > build  : create executable, don't increase build UID
+    > run    : run the executable (if possible)
+    > zip    : create zip file from executable
+    > deploy : build, create zip, and increase build UID
+    - - - -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - - - - - -->
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
     Import Section
@@ -29,7 +38,7 @@
     <!-- Properties -->
     <loadproperties srcfile="build.properties"/>
 
-    <!-- Build number (hacky ik) -->
+    <!-- Build number -->
     <trycatch property="prop" reference="ref">
         <try>
             <loadproperties srcfile="build.number"/>
@@ -40,41 +49,6 @@
         </catch>
     </trycatch>
 
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Runnable Section
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-    <property name="version.build_uid" value="${build.number}"/>
-
-    <!-- Build All -->
-    <target name="build">
-        <antcall target="clean" />
-        <antcall target="init" />
-        <antcall target="src.copy" />
-        <antcall target="libs.copy" />
-        <antcall target="scripts.copy" />
-        <antcall target="res.copy" />
-        <antcall target="src.replace_tokens" />
-        <antcall target="res.replace_tokens" />
-        <antcall target="script.replace_tokens" />
-        <antcall target="compile" />
-        <antcall target="jar" />
-        <antcall target="clean_build" />
-        <antcall target="zip" />
-        <!-- Increase build file when finished -->
-        <buildnumber file="build.number"/>
-        <echo>Build ${build.number} created.</echo>
-    </target>
-
-    <!-- Run Jar -->
-	<target name="run">
-        <java jar="${build}/${project.name}.jar" fork="true"/>
-    </target>
-
-    <!-- Compile and Run -->
-    <target name="cr">
-        <antcall target="build" />
-        <antcall target="run" />
-    </target>
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
     Declare Section
@@ -89,284 +63,45 @@
         <format property="version.tstamp" pattern="${version.tstamp.pattern}"/>
     </tstamp>
 
+    <property name="ajb_xml" value="ajb.xml" />
     <property name="build" value="${build.dir}/build" />
     <property name="install" value="${build.dir}/install" />
-    <property name="src" value="${build}/src" />
-    <property name="bin" value="${build}/bin" />
-    <property name="lib" value="${build}/${build.dir.lib}" />
-    <property name="script" value="${build}/${build.dir.script}" />
-    <property name="res" value="${build}/${build.dir.res}" />
 
-    <path id="classpath"/>
-    <if>
-        <equals arg1="${project.haslib}" arg2="true" />
-        <then>
-            <path id="classpath">
-                <fileset dir="${path.dir.lib}" includes="*.jar" />
-            </path>
-        </then>
-    </if>
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Clean
+    Runnable Section
     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
 
-    <target name="clean">
+    <target name="deploy">
+        <antcall target="build" />
+        <antcall target="zip" />
+        <buildnumber file="build.number"/>
+        <echo>Build ${build.number} created.</echo>
+    </target>
+
+    <!-- Build All -->
+    <target name="build">
+        <!-- reinit folder structure -->
         <delete dir="${build}" />
-    </target>
-
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Init
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-
-    <target name="init">
-        <mkdir dir="${build.dir}" />
         <mkdir dir="${build}" />
-        <mkdir dir="${src}" />
-        <mkdir dir="${bin}" />
         <mkdir dir="${install}" />
+        
+        <ant antfile="${ajb_xml}" target="build"  inheritall="true" inheritrefs="true" >
+            <property name="a_msgprefix" value=""/>
+            <property name="a_srcdir" value="${build}/src"/>
+            <property name="a_libdir" value="${path.dir.lib}"/>
+            <property name="a_resdir" value="${path.dir.res}"/>
+            <property name="a_scriptdir" value="${path.dir.script}"/>
+            <property name="a_outdir" value="${build}"/>
+            <property name="a_isdebug" value="${build.is_debug}"/>
+            <property name="a_uid" value="${build.number}"/>
+            <property name="a_tstamp" value="${version.tstamp}"/>
+        </ant>
     </target>
-
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Copy files
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-
-    <!-- function template -->
-    <target name="copy">
-    <if>
-    <equals arg1="${a_cond}" arg2="true" />
-        <then>
-            <if>
-                <available file="${a_src}" type="dir"/>
-                <then>
-                    <mkdir dir="${a_dest}" />
-                    <copy todir="${a_dest}">
-                        <fileset dir="${a_src}">
-                            <include name="**/*.*"/>
-                        </fileset>
-                    </copy> 
-                </then>
-                <else>
-<fail>Not found ${a_name} at path ${a_src}.
-Change path or disable ${a_name} for project.</fail>
-                </else>
-            </if>
-        </then>
-        <else>
-<echo>Skipped copy ${a_name}: see configuration."</echo>
-        </else>
-    </if>
-    </target>
-
-    <!-- copy source files -->
-    <target name="src.copy"> 
-        <antcall target="copy">       
-            <param name="a_src" value="${path.dir.src}"/>
-            <param name="a_dest" value="${src}"/>
-            <param name="a_name" value="source files"/>
-            <param name="a_cond" value="true"/>
-        </antcall>
-    </target>
-
-    <!-- copy libs -->
-    <target name="libs.copy">
-        <antcall target="copy">       
-            <param name="a_src" value="${path.dir.lib}"/>
-            <param name="a_dest" value="${lib}"/>
-            <param name="a_name" value="libraries"/>
-            <param name="a_cond" value="${project.haslib}"/>
-        </antcall>
-    </target>
-
-    <!-- copy scripts -->
-    <target name="scripts.copy">
-    <antcall target="copy">       
-        <param name="a_src" value="${path.dir.script}"/>
-        <param name="a_dest" value="${script}"/>
-        <param name="a_name" value="script files"/>
-        <param name="a_cond" value="${project.hasscript}"/>
-    </antcall>
-    </target>
-
-    <!-- copy resources -->
-    <target name="res.copy">
-    <antcall target="copy">       
-        <param name="a_src" value="${path.dir.res}"/>
-        <param name="a_dest" value="${res}"/>
-        <param name="a_name" value="resources"/>
-        <param name="a_cond" value="${project.hasres}"/>
-    </antcall>
-    </target>
-
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Replace Tokens
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-
-    <!-- function template: folder -->
-    <target name="replace_tokens">
-        <foreach target="replace_tokens_file" param="a_file">
-            <path>
-                <fileset dir="${a_dir}" casesensitive="yes">
-                    <include name="**/*.*"/>
-                </fileset>  
-            </path>
-        </foreach>
-    </target>
-
-    <!-- function template: file -->
-    <target name="replace_tokens_file">
-        <replace file="${a_file}">
-        <replacefilter 
-            token="${version.major.token}" 
-            value="${version.major}"/>
-        <replacefilter 
-            token="${version.minor.token}" 
-            value="${version.minor}"/>
-        <replacefilter 
-            token="${version.build.token}" 
-            value="${version.build}"/>
-        <replacefilter 
-            token="${version.build_uid.token}" 
-            value="${version.build_uid}"/> 
-        <replacefilter 
-            token="${version.tstamp.token}"
-            value="${version.tstamp}"/>
-        <replacefilter 
-            token="${version.full.token}"
-            value="${version.full}"/>
-        <replacefilter 
-            token="${project.name.token}"
-            value="${project.name}"/>
-        <replacefilter 
-            token="${project.vendor.token}"
-            value="${project.vendor}"/>
-        </replace>
-    </target>
-
-    <!-- function call: source files -->
-    <target name="src.replace_tokens">
-        <if>
-            <equals arg1="${build.replace_tokens.src}" arg2="true" />
-            <then>
-                <antcall target="replace_tokens">       
-                    <param name="a_dir" value="${src}"/>
-                </antcall>
-            </then>
-            <else>
-<echo>Skipped token replace for source files.</echo>   
-            </else>
-        </if>
-    </target>
-
-    <!-- function call: resource files -->
-    <target name="res.replace_tokens">
-        <if>
-            <and>
-                <equals arg1="$project.hasres}" arg2="true" />
-                <equals arg1="${build.replace_tokens.res}" arg2="true" />
-            </and>
-            <then>
-                <antcall target="replace_tokens">       
-                    <param name="a_dir" value="${res}"/>
-                </antcall>
-            </then>
-            <else>
-<echo>Skipped token replace for resource files.</echo>   
-            </else>
-        </if>
-    </target>
-
-    <!-- function call: script files -->
-    <target name="script.replace_tokens">
-        <if>
-            <and>
-                <equals arg1="$project.hasscript}" arg2="true" />
-                <equals arg1="${build.replace_tokens.script}" arg2="true" />
-            </and>
-            <then>
-                <antcall target="replace_tokens">       
-                    <param name="a_dir" value="${script}"/>
-                </antcall>
-            </then>
-            <else>
-<echo>Skipped token replace for script files.</echo>   
-            </else>
-        </if>
-    </target>
-
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Compile Sources
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-    
-    <!-- Compile .java to .class files -->
-    <target name="compile">
-        <javac  destdir="${bin}" 
-                classpathref="classpath" 
-                debug="${build.is_debug}" 
-                includeantruntime="false" >
-            <src path="${src}"/>
-        </javac>
-    </target>
-
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Create runnable jar
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-
-    <!-- Create executable archive -->
-    <target name="jar">
-        <var name="libsep" value="/"/>
-        <if>
-            <equals arg1="${build.dir.lib}" arg2="" />
-            <then>
-                <var name="libsep" value=""/>
-            </then>
-        </if>
-        <!-- prefix source files -->
-        <pathconvert property="path.lib" pathsep=" ">
-            <mapper>
-                <chainedmapper>
-                    <!-- remove absolute path -->
-                    <flattenmapper />
-                    <!-- add prefix -->
-                    <globmapper from="*" to="${build.dir.lib}${libsep}*" />
-                </chainedmapper>
-            </mapper>
-            <path>
-                <fileset dir="${path.dir.lib}">
-                    <include name="**/*.jar" />
-                </fileset>
-            </path>
-        </pathconvert>
-        <jar destfile="${build}/${project.name}.jar" basedir="${bin}" >
-            <manifest>
-                <attribute name="Build-By" value="${user.name}" />
-                <attribute name="Main-Class" value="${main.class}" />
-                <attribute name="Class-Path" value="${path.lib}" />
-                <section name="common">
-                    <attribute name="Specification-Title" 
-                    value="${project.name}" />
-                    <attribute name="Specification-Version" 
-                    value="${version.pattern}" />
-                    <attribute name="Specification-Vendor" 
-                    value="${project.vendor}" />
-                    <attribute name="Implementation-Title" 
-                    value="${project.name}" />
-                    <attribute name="Implementation-Version" 
-                    value="${version.pattern} / ${build.number}" />
-                    <attribute name="Implementation-Vendor" 
-                    value="${project.vendor}" />
-                </section>
-            </manifest>
-        </jar>
-    </target>
-
-    <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
-    Task: Cleanup build
-    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
-
-    <target name="clean_build">
-        <delete dir="${src}" />
-        <delete dir="${bin}" />
+        
+    <!-- Run a test -->
+    <target name="run">
+        <java jar="${build}/${project.name}.jar" fork="true"/>
     </target>
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
@@ -376,5 +111,4 @@ Change path or disable ${a_name} for project.</fail>
     <target name="zip" >
 		<zip destfile="${install}/${install.pattern}.zip" basedir="${build}" />
 	</target>
-
 </project>
