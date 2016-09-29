@@ -12,6 +12,8 @@
     V1.0.1  :   User can define wether the project has lib/script/res
     V1.0.2  :   Fixed path bug when project has no libs
     V1.1.0  :   Shared library (single/multi)
+    V1.1.1  :   Includes Excludes
+    V1.1.2  :   Unnecessary file creation removed
     - - - -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - - - - - -->
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
@@ -141,11 +143,7 @@
 
     <target name="init">
         <mkdir dir="${build}" />
-        <mkdir dir="${src}" />
         <mkdir dir="${bin}" />
-        <mkdir dir="${lib}" />
-        <mkdir dir="${res}" />
-        <mkdir dir="${script}" />
     </target>
 
     <!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
@@ -321,7 +319,9 @@ ${build.replace_tokens.script}</echo>
         <javac  destdir="${bin}" 
                 classpathref="classpath" 
                 debug="${a_isdebug}" 
-                includeantruntime="false" >
+                includeantruntime="false"
+                includes="${build.include}"
+                excludes="${build.exclude}" >
             <src path="${src}"/>
         </javac>
     </target>
@@ -369,7 +369,8 @@ ${build.replace_tokens.script}</echo>
         </if>
         
         <jar    destfile="${build}/${project.name}.jar" basedir="${bin}"
-                encoding="${build.encoding}" >
+                encoding="${build.encoding}" excludes="${build.exclude}"
+                includes="${build.include}">
             <manifest>
                 <attribute name="Build-By" value="${user.name}" />
                 <attribute name="Main-Class" value="${main.class}" />

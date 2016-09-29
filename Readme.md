@@ -25,7 +25,7 @@ environments.
 
 ### Project: BuildFile_MultiEnv
 
-This is the build.xml made for deployment to multiple environments. Each environment (optionally) contains it's own
+This is the build.xml made for deployment to multiple environments. Each environment (optionaly) contains it's own
 library, script and resource folder. Use this if you are planning to deploy your project on multiple environments such
 as: development, test, integration, production.
 
@@ -73,9 +73,7 @@ No donations are accepted here, donations go to the
 ## TODO
 
 * Shared logic for single and multi deployment:
-    * Create parametrized deploy file (mod: single deployment)
-    * Call with specific parameters for each environment
-    * User defined environments possible?
+    * User defined environments possible TBD...
 * User defined tokens (e.g. 5)
     * Create variables
     * Update replace
